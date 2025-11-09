@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile } from 'fs/promises'
-import path from 'path'
 import { nanoid } from 'nanoid'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient()
+
+    // Verify user is authenticated
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File
 
@@ -39,24 +49,29 @@ export async function POST(request: NextRequest) {
 
     // Convert file to buffer
     const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
 
-    // Save to public/uploads directory
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads')
-    const filePath = path.join(uploadDir, filename)
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('party-images')
+      .upload(filename, bytes, {
+        contentType: file.type,
+        upsert: false,
+      })
 
-    // Ensure upload directory exists
-    const fs = require('fs')
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true })
+    if (error) {
+      console.error('Error uploading to Supabase Storage:', error)
+      return NextResponse.json(
+        { error: 'Failed to upload file' },
+        { status: 500 }
+      )
     }
 
-    await writeFile(filePath, buffer)
+    // Get public URL
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('party-images').getPublicUrl(filename)
 
-    // Return URL
-    const url = `/uploads/${filename}`
-
-    return NextResponse.json({ url })
+    return NextResponse.json({ url: publicUrl })
   } catch (error) {
     console.error('Error uploading file:', error)
     return NextResponse.json(
