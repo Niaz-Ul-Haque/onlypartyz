@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(if [ -f \".env.local\" ])",
+      "Bash(then cat .env.local)",
+      "Bash(else echo \"File does not exist\")",
+      "Bash(fi)",
+      "Bash(if [ -f \"README.md\" ])",
+      "Bash(then cat README.md)",
+      "Bash(npm run build:*)",
+      "Bash(tree:*)",
+      "Bash(npm run dev:*)",
+      "Bash(taskkill /F /PID 11432)",
+      "Bash(taskkill //F //PID 11432)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
